@@ -1,0 +1,5 @@
+kropkid is a work in progress forking server for a telnet-based game of Dots.
+
+Platform: POSIX-compliant, tested on linux
+License: GPL v3, see COPYING for more info
+
