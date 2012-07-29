@@ -1,6 +1,6 @@
 
 #define SRV_PORT 23001
-#define MGR_SOCKET "/home/pawel/kropkid_sock"
+#define MGR_SOCKET "/var/run/kropkid_sock"
 
 #define MAP_HEIGHT 18
 #define MAP_WIDTH 35
