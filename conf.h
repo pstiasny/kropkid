@@ -11,6 +11,8 @@
 #define MAP_WIDTH 35
 #define MAP_LEFT 6
 
+#define MAX_GAMES 1024
+
 /*
  * 0 - No debug messages
  * 1 - Warnings

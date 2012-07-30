@@ -14,7 +14,7 @@ struct message {
 	pid_t pid;
 };
 
-struct game *idle_games[1024];
+struct game *idle_games[MAX_GAMES];
 int idle_game_count;
 
 /**
@@ -52,9 +52,9 @@ int get_send_socket() {
 void handle_idle_message(struct message *im, int socket) {
 	int i;
 	DBG(3, "Received idle notification from pid %d\n", im->pid);
-	if (idle_game_count >= 1024) {
+	if (idle_game_count >= MAX_GAMES) {
 		DBG(1, "Too many idle sessions, I'm dying.\n");
-		for (i = 0; i < 1024; i++) {
+		for (i = 0; i < MAX_GAMES; i++) {
 			DBG(2, "Session %d: %d\n", i, idle_games[i]->sessions[0]);
 			struct game *g = idle_games[i];
 			int shm_id = g->game_shm;
