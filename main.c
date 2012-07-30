@@ -60,16 +60,16 @@ int main() {
 	if (sock == -1) return 1;
 	int yes = 1;
 	if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1) {
-		perror("setsockopt"); return 1; }
+		perror("listener: setsockopt"); return 1; }
 	sa.sin_family = AF_INET;
 	sa.sin_port = htons(SRV_PORT);
 	sa.sin_addr.s_addr = INADDR_ANY;
-	if (bind(sock, (struct sockaddr*)&sa, sizeof(sa)) == -1) { perror("bind"); return 1; }
+	if (bind(sock, (struct sockaddr*)&sa, sizeof(sa)) == -1) { perror("listener: bind"); return 1; }
 	if (listen(sock, 5) == -1) return 1;
 	// signal(SIGCHLD, SIG_IGN);
 	for(;;) {
 		int in_sock = accept(sock, (struct sockaddr*)&sr, &addrsize);
-		if (in_sock == -1) { perror("accept"); return 1; }
+		if (in_sock == -1) { perror("listener: accept"); return 1; }
 		int pid = fork();
 		if (pid == 0) {
 			signal(SIGINT, SIG_DFL);

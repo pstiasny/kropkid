@@ -126,7 +126,7 @@ void telnet_session(int sock) {
 	FILE *out;
 	out = fdopen(sock, "w");
 	if ( out == 0) {
-		perror("fdopen");
+		perror("client: fdopen");
 		exit(5);
 	}
 	
@@ -138,7 +138,7 @@ void telnet_session(int sock) {
 	sigemptyset(&usr1_sig_action.sa_mask);
 
 	if (sigaction(SIGUSR1, &usr1_sig_action, 0) == -1) {
-		perror("sigaction");
+		perror("client: sigaction");
 		exit(1);
 	}
 	
@@ -195,7 +195,7 @@ void telnet_session(int sock) {
 			}
 			fflush(out);
 		} else if (status == -1 && errno != EINTR) {
-			perror("recv");
+			perror("client: recv");
 			break;
 		} else if (status != 1 && errno == EINTR) {
 			if (map_updated) {

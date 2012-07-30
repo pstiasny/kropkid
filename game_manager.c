@@ -85,7 +85,7 @@ void handle_idle_message(struct message *im, int socket) {
 	int shmid = shmget(IPC_PRIVATE,
 			sizeof(struct game),
 			IPC_CREAT | 0600);
-	if (shmid == -1) { perror("shmid"); }
+	if (shmid == -1) { perror("session manager: shmid"); }
 	else {
 		struct game *g = (struct game*)shmat(shmid, 0, 0);
 		g->game_shm = shmid;
@@ -138,7 +138,7 @@ void handle_map_shm_query(struct message *mq, int socket) {
 	int i = get_game_by_pid(mq->pid);
 	if (i != -1) {
 		if (send(socket, &(idle_games[i]->game_shm), sizeof(int), 0) == -1)
-			printf("Manager: send failed\n");
+			printf("session manager: send failed\n");
 	}
 }
 
@@ -187,11 +187,13 @@ int run_manager() {
 				(struct sockaddr*)&local,
 				strlen(local.sun_path) + sizeof(local.sun_family));
 		if (bres == -1) {
-			perror("bind");
+			perror("session manager: bind");
 			exit(1);
 		}
 
 		if (listen(sock, 10) == -1) exit(1);
+
+		// TODO: Initialise socket before forking? (Error handling)
 
 		DBG(2, "Session manager is running\n");
 		for(;;) {
@@ -242,7 +244,7 @@ int run_manager() {
 void notify_idle_session(pid_t pid) {
 	DBG(3, "Sending idle session notification from pid %d\n", pid);
 	int sock = get_send_socket();
-	if (sock == -1) perror("Client: get_send_socket");
+	if (sock == -1) perror("client: get_send_socket");
 	
 	struct message m;
 	m.mt = MSG_IDLE;
@@ -259,7 +261,7 @@ void notify_idle_session(pid_t pid) {
 void notify(pid_t pid, enum MESSAGE_TYPE t) {
 	DBG(3, "Sending notification from pid %d\n", pid);
 	int sock = get_send_socket();
-	if (sock == -1) perror("Client: get_send_socket");
+	if (sock == -1) perror("client: get_send_socket");
 	
 	struct message m;
 	m.mt = t;
@@ -272,18 +274,18 @@ void notify(pid_t pid, enum MESSAGE_TYPE t) {
 int get_map_shm(pid_t pid) {
 	DBG(3, "Requesting map SHM from pid %d\n", pid);
 	int sock = get_send_socket();
-	if (sock == -1) perror("Client: get_send_socket");
+	if (sock == -1) perror("client: get_send_socket");
 	
 	struct message mq;
 	mq.mt = MSG_MAP_SHM_QUERY;
 	mq.pid = pid;
 
 	if (send(sock, &mq, sizeof(mq), 0) == -1)
-		printf("Client: send failed\n");
+		printf("client: send failed\n");
 
 	int map_shm = -1;
 	if (recv(sock, &map_shm, sizeof(map_shm), 0) <= 0)
-		printf("Client: recv failed\n");
+		printf("client: recv failed\n");
 
 	close(sock);
 
