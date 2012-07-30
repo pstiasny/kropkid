@@ -151,6 +151,7 @@ void telnet_session(int sock) {
 	init_map();
 
 	int exit = 0, cur_y = MAP_HEIGHT / 2, cur_x = MAP_WIDTH / 2;
+	int escape_status = 0; /* for reading escape sequences (arrow keys) */
 
 	/* set raw terminal, no echo (telnet protocol) */
 	fputs("\xff\xfb\x01\xff\xfb\x03\xff\xfd\x0f3", out);
@@ -173,12 +174,20 @@ void telnet_session(int sock) {
 			switch(input) {
 				case 'q':
 					exit = 1; break;
+				case 'A':
+					if (escape_status != 2) break;
 				case 'k' :
 					cur_y = max(0, cur_y - 1); break;
+				case 'B':
+					if (escape_status != 2) break;
 				case 'j':
 					cur_y = min(MAP_HEIGHT - 1, cur_y + 1); break;
+				case 'D':
+					if (escape_status != 2) break;
 				case 'h' :
 					cur_x = max(0, cur_x - 1); break;
+				case 'C':
+					if (escape_status != 2) break;
 				case 'l':
 					cur_x = min(MAP_WIDTH - 1, cur_x + 1); break;
 				case ' ':
@@ -192,7 +201,16 @@ void telnet_session(int sock) {
 							fputs("\e[8;50H\e[0KWaiting for player 1 (X) to move...", out);
 					}
 					break;
+				case 0x1b:
+					if (escape_status == 0) escape_status = 1;
+					break;
+				case '[':
+					if (escape_status == 1) escape_status = 2;
+					break;
 			}
+			if ((escape_status == 1 && input != 0x1b) ||
+					(escape_status == 2 && input != '['))
+				escape_status = 0;
 			fflush(out);
 		} else if (status == -1 && errno != EINTR) {
 			perror("client: recv");
