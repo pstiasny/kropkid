@@ -1,5 +1,6 @@
 #include "conf.h"
 #include "game_manager.h"
+#include "ipc_message.h"
 
 #include <stdio.h>
 #include <unistd.h>
@@ -8,11 +9,6 @@
 #include <sys/un.h>
 #include <sys/shm.h>
 #include <signal.h>
-
-struct message {
-	enum MESSAGE_TYPE mt;
-	pid_t pid;
-};
 
 struct game *idle_games[MAX_GAMES];
 int idle_game_count;
@@ -164,6 +160,22 @@ void at_manager_exit(int sig) {
 }
 
 /**
+ * Message handlers for use with ipc_receive_message.  Indices correspond to
+ * enum MESSAGE_TYPE.
+ */
+struct message_handler msg_handlers[] =
+{
+	/* MSG_IDLE */
+	{ sizeof(struct message), handle_idle_message },
+	/* MSG_MOVE */
+	{ sizeof(struct message), handle_move_message },
+	/* MSG_MAP_SHM_QUERY */
+	{ sizeof(struct message), handle_map_shm_query },
+	/* MSG_SESSION_QUIT */
+	{ sizeof(struct message), handle_session_quit_message }
+};
+
+/**
  * Start the game session manager process and return
  */
 int run_manager() {
@@ -203,33 +215,7 @@ int run_manager() {
 
 			DBG(3, "Unix socket connection accepted\n");
 
-			enum MESSAGE_TYPE mt;
-			recv(rsock, &mt, sizeof(mt), 0);
-			
-			if (mt == MSG_IDLE) {
-				struct message im;
-				im.mt = mt;
-				recv(rsock, &(im.pid), sizeof(im) - sizeof(mt), 0);
-				handle_idle_message(&im, rsock);
-			} else if (mt == MSG_MAP_SHM_QUERY) {
-				struct message mq;
-				mq.mt = mt;
-				recv(rsock, &(mq.pid), sizeof(mq) - sizeof(mt), 0);
-				handle_map_shm_query(&mq, rsock);
-			} else if (mt == MSG_MOVE) {
-				struct message mm;
-				mm.mt = mt;
-				recv(rsock, &(mm.pid), sizeof(mm) - sizeof(mt), 0);
-				handle_move_message(&mm, rsock);
-			} else if (mt == MSG_SESSION_QUIT) {
-				struct message mq;
-				mq.mt = mt;
-				recv(rsock, &(mq.pid), sizeof(mq) - sizeof(mt), 0);
-				handle_session_quit_message(&mq, rsock);
-			} else {
-				DBG(1, "Session manager received an invalid message type: "
-						"%d\n", mt);
-			}
+			ipc_receive_message(msg_handlers, rsock);
 			
 			close(rsock);
 		}

@@ -1,5 +1,7 @@
 #include <stdlib.h>
 
+#include "conf.h"
+
 struct game {
 	/* PIDs of participating telnet sessions */
 	pid_t sessions[2];
