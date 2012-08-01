@@ -26,25 +26,6 @@ int get_game_by_pid(pid_t pid) {
 	return -1;
 }
 
-/**
- * Returns a socket connected to the game manager
- */
-int get_send_socket() {
-	struct sockaddr_un remote;
-	int sock = socket(AF_UNIX, SOCK_STREAM, 0);
-	remote.sun_family = AF_UNIX;
-	strcpy(remote.sun_path, MGR_SOCKET);
-
-	if (connect(sock,
-			(struct sockaddr*)&remote,
-			strlen(remote.sun_path) + sizeof(remote.sun_family)) == -1) {
-		close(sock);
-		return -1;
-	}
-
-	return sock;
-}
-
 void handle_idle_message(struct message *im, int socket) {
 	int i;
 	DBG(3, "Received idle notification from pid %d\n", im->pid);
@@ -191,37 +172,16 @@ int run_manager() {
 		signal(SIGTERM, at_manager_exit);
 		signal(SIGINT, at_manager_exit);
 
-		int sock = socket(AF_UNIX, SOCK_STREAM, 0);
-		if (sock == -1) exit(1);
-
-		struct sockaddr_un local;
-		local.sun_family = AF_UNIX;
-		strcpy(local.sun_path, MGR_SOCKET);
-		
-		int bres = bind(
-				sock,
-				(struct sockaddr*)&local,
-				strlen(local.sun_path) + sizeof(local.sun_family));
-		if (bres == -1) {
-			perror("session manager: bind");
+		int listener_socket = ipc_start_listener();
+		if (listener_socket == -1) {
+			perror("session manager: ipc_start_listener");
 			exit(1);
 		}
-
-		if (listen(sock, 10) == -1) exit(1);
-
 		// TODO: Initialise socket before forking? (Error handling)
 
 		DBG(2, "Session manager is running\n");
 		for(;;) {
-			struct sockaddr_un remote;
-			socklen_t desclen = sizeof(remote);
-			int rsock = accept(sock, (struct sockaddr*)&remote, &desclen);
-
-			DBG(3, "Unix socket connection accepted\n");
-
-			ipc_receive_message(msg_handlers, rsock);
-			
-			close(rsock);
+			ipc_accept_message(msg_handlers, listener_socket);
 		}
 		exit(0);
 	} else
@@ -246,19 +206,6 @@ void notify_idle_session(pid_t pid) {
 	int dummy;
 	recv(sock, &dummy, 1, 0);
 	close(sock);
-}
-
-void notify(pid_t pid, enum MESSAGE_TYPE t) {
-	DBG(3, "Sending notification from pid %d\n", pid);
-	int sock = get_send_socket();
-	if (sock == -1) perror("client: get_send_socket");
-	
-	struct message m;
-	m.mt = t;
-	m.pid = pid;
-
-	if (send(sock, &m, sizeof(m), 0) == -1)
-		printf("Send failed\n");
 }
 
 int get_map_shm(pid_t pid) {

@@ -24,5 +24,4 @@ enum MESSAGE_TYPE {
 
 int run_manager();
 void notify_idle_session(pid_t pid);
-void notify(pid_t pid, enum MESSAGE_TYPE t);
 int get_map_shm(pid_t pid);

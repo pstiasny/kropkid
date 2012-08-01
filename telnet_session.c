@@ -1,5 +1,6 @@
 #include "conf.h"
 #include "game_manager.h"
+#include "ipc_message.h"
 
 #include <stdio.h>
 #include <errno.h>
