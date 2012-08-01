@@ -42,7 +42,6 @@ void map_set(int y, int x, char v) {
 	if (map != 0)
 		map[y * MAP_WIDTH + x] = v;
 
-	/*notify(getpid(), MSG_MOVE);*/
 	if (own_pid == own_game->sessions[0] &&
 			own_game->sessions[1] != 0)
 		kill(own_game->sessions[1], SIGUSR1);

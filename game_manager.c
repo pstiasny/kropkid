@@ -95,21 +95,6 @@ void handle_session_quit_message(struct message *qm, int socket) {
 	}
 }
 
-void handle_move_message(struct message *mm, int socket) {
-	DBG(3, "Move message recvd\n");
-	int game_id = get_game_by_pid(mm->pid);
-	if (game_id != -1) {
-		struct game *g = idle_games[game_id];
-		if (mm->pid == g->sessions[0] &&
-				g->sessions[1] != 0)
-			kill(g->sessions[1], SIGUSR1);
-		else if (mm->pid == g->sessions[1])
-			kill(g->sessions[0], SIGUSR1);
-		else
-			DBG(2, "Noone to poke\n");
-	}
-}
-
 void handle_map_shm_query(struct message *mq, int socket) {
 	DBG(3, "Received map SHM query from pid %d\n", mq->pid);
 	int i = get_game_by_pid(mq->pid);
@@ -149,9 +134,6 @@ struct message_handler msg_handlers[] =
 	[MSG_IDLE] = { 
 		.message_size = sizeof(struct message), 
 		.handler_func = handle_idle_message },
-	[MSG_MOVE] = {
-		.message_size = sizeof(struct message),
-		.handler_func = handle_move_message },
 	[MSG_MAP_SHM_QUERY] = {
 		.message_size = sizeof(struct message),
 		.handler_func = handle_map_shm_query },

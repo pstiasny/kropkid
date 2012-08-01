@@ -17,7 +17,6 @@ struct game {
 
 enum MESSAGE_TYPE {
 	MSG_IDLE,
-	MSG_MOVE,
 	MSG_MAP_SHM_QUERY,
 	MSG_SESSION_QUIT
 };
