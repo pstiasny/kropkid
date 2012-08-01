@@ -173,7 +173,9 @@ void telnet_session(int sock) {
 		if (status == 1) {
 			switch(input) {
 				case 'q':
-					exit = 1; break;
+					fprintf(out, "\e[0m\e[2J\e[HGoodbye!\r\n");
+					exit = 1;
+					break;
 				case 'A':
 					if (escape_status != 2) break;
 				case 'k' :
@@ -217,19 +219,22 @@ void telnet_session(int sock) {
 			break;
 		} else if (status != 1 && errno == EINTR) {
 			if (map_updated) {
-				print_map(out, 3, MAP_LEFT);
-				map_updated = 0;
-				waiting_for_opponent = 0;
-				fputs("\e[8;50H\e[0K", out);
+				if (own_game->state == GAME_ORPHANED) {
+					fprintf(out, "\e[0m\e[2J\e[HThe other player has left\r\n");
+					exit = 1;
+				} else {
+					print_map(out, 3, MAP_LEFT);
+					map_updated = 0;
+					waiting_for_opponent = 0;
+					fputs("\e[8;50H\e[0K", out);
+				}
 			}
 		} else if (status == 0) {
 			break;
 		} else
 			DBG(1, "???\n");
 	}
-	fprintf(out, "\e[0m\e[2J\e[HGoodbye!\n");
 	fflush(out);
-
 	fclose(out);
 
 	notify(own_pid, MSG_SESSION_QUIT);

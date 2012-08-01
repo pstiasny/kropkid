@@ -4,6 +4,11 @@
 
 #include "conf.h"
 
+enum GAME_STATE {
+	GAME_ACTIVE,
+	GAME_ORPHANED
+};
+
 struct game {
 	/* PIDs of participating telnet sessions */
 	pid_t sessions[2];
@@ -13,6 +18,8 @@ struct game {
 
 	/* game map */
 	char map[MAP_WIDTH * MAP_HEIGHT];
+
+	enum GAME_STATE state;
 };
 
 enum MESSAGE_TYPE {

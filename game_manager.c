@@ -69,6 +69,7 @@ void handle_idle_message(struct message *im, int socket) {
 
 		g->sessions[0] = im->pid;
 		g->sessions[1] = 0;
+		g->state = GAME_ACTIVE;
 
 		memset(g->map, 0, MAP_WIDTH*MAP_HEIGHT*sizeof(char));
 
@@ -92,6 +93,11 @@ void handle_session_quit_message(struct message *qm, int socket) {
 		idle_games[gid] = idle_games[--idle_game_count];
 		shmdt(g);
 		shmctl(shm_id, IPC_RMID, 0);
+	} else {
+		pid_t remaining_session =
+			(g->sessions[0] == 0) ? g->sessions[1] : g->sessions[0];
+		g->state = GAME_ORPHANED;
+		kill(remaining_session, SIGUSR1);
 	}
 }
 
