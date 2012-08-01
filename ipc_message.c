@@ -28,8 +28,7 @@ int ipc_receive_message(struct message_handler handlers[], int rsock) {
 	if (recv(
 			rsock, MESSAGE_TAIL(message_data),
 			handlers[message_type].message_size - sizeof(message_type),
-			0) == -1)
-	{
+			0) == -1) {
 		perror("ipc_receive_message: recv");
 		return -1;
 	}
@@ -38,7 +37,6 @@ int ipc_receive_message(struct message_handler handlers[], int rsock) {
 	handlers[message_type].handler_func(message_data, rsock);
 
 	free(message_data);
-
 	return 0;
 }
 
@@ -48,7 +46,10 @@ int ipc_receive_message(struct message_handler handlers[], int rsock) {
 int ipc_accept_message(struct message_handler handlers[], int listener_socket) {
 	struct sockaddr_un remote;
 	socklen_t desclen = sizeof(remote);
-	int rsock = accept(listener_socket, (struct sockaddr*)&remote, &desclen);
+	int rsock = accept(
+			listener_socket,
+			(struct sockaddr*)&remote,
+			&desclen);
 	if (rsock == -1) {
 		perror("ipc_accept_message: accept");
 		return -1;
@@ -57,7 +58,6 @@ int ipc_accept_message(struct message_handler handlers[], int listener_socket) {
 	int r = ipc_receive_message(handlers, rsock);
 
 	close(rsock);
-
 	return r;
 }
 
@@ -108,6 +108,9 @@ int get_send_socket() {
 	return sock;
 }
 
+/**
+ * Send a message without waiting for response
+ */
 void notify(pid_t pid, int message_type) {
 	/* TODO: better error handling */
 	DBG(3, "Sending notification from pid %d\n", pid);
@@ -120,5 +123,37 @@ void notify(pid_t pid, int message_type) {
 
 	if (send(sock, &m, sizeof(m), 0) == -1)
 		perror("client: send\n");
+}
+
+/**
+ * Send a message and wait for response
+ * pid				sender's PID
+ * message_type		type of message to send as defined by host's handlers
+ * response_buffer	buffer for the response
+ * response_size	bytes to receive. if 0, wait for the message to be processed
+ */
+int query(pid_t pid, int message_type, void *response_buffer, size_t response_size) {
+	int sock = get_send_socket();
+	if (sock == -1) {
+		perror("client: get_send_socket");
+		return -1;
+	}
+	
+	struct message mq;
+	mq.mt = message_type;
+	mq.pid = pid;
+
+	if (send(sock, &mq, sizeof(mq), 0) == -1) {
+		perror("client: send");
+		return -1;
+	}
+
+	if (recv(sock, response_buffer, response_size, 0) != response_size) {
+		perror("client: recv");
+		return -1;
+	}
+
+	close(sock);
+	return 0;
 }
 

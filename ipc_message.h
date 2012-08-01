@@ -20,4 +20,5 @@ int ipc_start_listener();
 /* client */
 int get_send_socket();
 void notify(pid_t pid, int message_type);
+int query(pid_t pid, int message_type, void *response_buffer, size_t response_size);
 

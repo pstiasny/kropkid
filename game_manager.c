@@ -193,38 +193,16 @@ int run_manager() {
  */
 void notify_idle_session(pid_t pid) {
 	DBG(3, "Sending idle session notification from pid %d\n", pid);
-	int sock = get_send_socket();
-	if (sock == -1) perror("client: get_send_socket");
-	
-	struct message m;
-	m.mt = MSG_IDLE;
-	m.pid = pid;
-
-	if (send(sock, &m, sizeof(m), 0) == -1)
-		printf("Send failed\n");
 
 	int dummy;
-	recv(sock, &dummy, 1, 0);
-	close(sock);
+	query(pid, MSG_IDLE, &dummy, 0);
 }
 
 int get_map_shm(pid_t pid) {
 	DBG(3, "Requesting map SHM from pid %d\n", pid);
-	int sock = get_send_socket();
-	if (sock == -1) perror("client: get_send_socket");
-	
-	struct message mq;
-	mq.mt = MSG_MAP_SHM_QUERY;
-	mq.pid = pid;
-
-	if (send(sock, &mq, sizeof(mq), 0) == -1)
-		printf("client: send failed\n");
-
 	int map_shm = -1;
-	if (recv(sock, &map_shm, sizeof(map_shm), 0) <= 0)
-		printf("client: recv failed\n");
-
-	close(sock);
+	if (query(pid, MSG_MAP_SHM_QUERY, &map_shm, sizeof(map_shm)) == -1)
+		return -1;
 
 	DBG(3, "Obtained map SHM id: %d\n", map_shm);
 	return map_shm;
