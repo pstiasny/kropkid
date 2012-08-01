@@ -3,7 +3,7 @@
 #include "ipc_message.h"
 
 #include <stdio.h>
-#include <unistd.h>
+#include <string.h>
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/un.h>
@@ -165,14 +165,18 @@ void at_manager_exit(int sig) {
  */
 struct message_handler msg_handlers[] =
 {
-	/* MSG_IDLE */
-	{ sizeof(struct message), handle_idle_message },
-	/* MSG_MOVE */
-	{ sizeof(struct message), handle_move_message },
-	/* MSG_MAP_SHM_QUERY */
-	{ sizeof(struct message), handle_map_shm_query },
-	/* MSG_SESSION_QUIT */
-	{ sizeof(struct message), handle_session_quit_message }
+	[MSG_IDLE] = { 
+		.message_size = sizeof(struct message), 
+		.handler_func = handle_idle_message },
+	[MSG_MOVE] = {
+		.message_size = sizeof(struct message),
+		.handler_func = handle_move_message },
+	[MSG_MAP_SHM_QUERY] = {
+		.message_size = sizeof(struct message),
+		.handler_func = handle_map_shm_query },
+	[MSG_SESSION_QUIT] = {
+		.message_size = sizeof(struct message),
+		.handler_func = handle_session_quit_message }
 };
 
 /**
