@@ -96,7 +96,7 @@ void handle_idle_message(struct message *im, int socket) {
 void handle_join_query(struct message *m, int socket) {
 	DBG(3, "Received join query from pid %d\n", m->pid);
 	struct join_message *jm = (struct join_message*)m;
-	/* Attach to an idle session */
+
 	int i = get_game_by_key(jm->game_key);
 	if (i != -1 && idle_games[i]->sessions[1] == 0)
 		idle_games[i]->sessions[1] = m->pid;

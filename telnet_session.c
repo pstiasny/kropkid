@@ -125,7 +125,8 @@ void session_join(FILE* out, int sock) {
 
 void session_start(FILE* out, int sock) {
 	fputs("kropkid\r\n"
-			"<http://github.com/PawelStiasny/kropkid>\r\n\r\n"
+			"<http://github.com/PawelStiasny/kropkid>\r\n"
+			"Your terminal should be at least 80x24 characters\r\n\r\n"
 			"[h]ost / [j]oin / [q]uit? ", out);
 	fflush(out);
 	char input = 0;
