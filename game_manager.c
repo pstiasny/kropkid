@@ -182,8 +182,7 @@ int run_manager() {
 void notify_idle_session(pid_t pid) {
 	DBG(3, "Sending idle session notification from pid %d\n", pid);
 
-	int dummy;
-	query(pid, MSG_IDLE, &dummy, 0);
+	query(pid, MSG_IDLE, 0, 0);
 }
 
 int get_map_shm(pid_t pid) {

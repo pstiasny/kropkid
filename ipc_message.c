@@ -129,7 +129,7 @@ void notify(pid_t pid, int message_type) {
  * Send a message and wait for response
  * pid				sender's PID
  * message_type		type of message to send as defined by host's handlers
- * response_buffer	buffer for the response
+ * response_buffer	buffer for the response or NULL if response_size is 0
  * response_size	bytes to receive. if 0, wait for the message to be processed
  */
 int query(pid_t pid, int message_type, void *response_buffer, size_t response_size) {
@@ -148,9 +148,16 @@ int query(pid_t pid, int message_type, void *response_buffer, size_t response_si
 		return -1;
 	}
 
-	if (recv(sock, response_buffer, response_size, 0) != response_size) {
-		perror("client: recv");
-		return -1;
+	if (response_size > 0) {
+		if (recv(sock, response_buffer, response_size, MSG_WAITALL) != response_size)
+		{
+			perror("client: recv");
+			return -1;
+		}
+	} else {
+		/* better way to wait for the connection to close? */
+		int dummy;
+		while (recv(sock, &dummy, sizeof(dummy), MSG_WAITALL) > 0);
 	}
 
 	close(sock);
