@@ -5,6 +5,7 @@
 #include "conf.h"
 
 enum GAME_STATE {
+	GAME_IDLE,
 	GAME_ACTIVE,
 	GAME_ORPHANED
 };
@@ -25,9 +26,11 @@ struct game {
 enum MESSAGE_TYPE {
 	MSG_IDLE,
 	MSG_MAP_SHM_QUERY,
-	MSG_SESSION_QUIT
+	MSG_SESSION_QUIT,
+	MSG_JOIN
 };
 
 int run_manager();
 void notify_idle_session(pid_t pid);
 int get_map_shm(pid_t pid);
+void notify_join_game(pid_t pid);

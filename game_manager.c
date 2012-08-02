@@ -47,17 +47,6 @@ void handle_idle_message(struct message *im, int socket) {
 		exit(1);
 	}
 
-	/* TEMPORARY! */
-	/* Attach to an idle session */
-	for (i = 0; i < idle_game_count; i++)
-		if (idle_games[i]->sessions[1] == 0) {
-			idle_games[i]->sessions[1] = im->pid;
-			return;
-		} else if (idle_games[i]->sessions[0] == 0) {
-			idle_games[i]->sessions[0] = im->pid;
-			return;
-		}
-
 	/* Allocate a shared game structure */
 	int shmid = shmget(IPC_PRIVATE,
 			sizeof(struct game),
@@ -76,6 +65,20 @@ void handle_idle_message(struct message *im, int socket) {
 		DBG(3, "Created map SHM with id %d\n", shmid);
 		idle_games[idle_game_count++] = g;
 	}
+}
+
+void handle_join_query(struct message *m, int socket) {
+	DBG(3, "Received join query from pid %d\n", m->pid);
+	/* Attach to an idle session */
+	int i;
+	for (i = 0; i < idle_game_count; i++)
+		if (idle_games[i]->sessions[1] == 0) {
+			idle_games[i]->sessions[1] = m->pid;
+			return;
+		} else if (idle_games[i]->sessions[0] == 0) {
+			idle_games[i]->sessions[0] = m->pid;
+			return;
+		}
 }
 
 void handle_session_quit_message(struct message *qm, int socket) {
@@ -106,7 +109,10 @@ void handle_map_shm_query(struct message *mq, int socket) {
 	int i = get_game_by_pid(mq->pid);
 	if (i != -1) {
 		if (send(socket, &(idle_games[i]->game_shm), sizeof(int), 0) == -1)
-			printf("session manager: send failed\n");
+			perror("session manager: send\n");
+	} else {
+		if (send(socket, &i, sizeof(int), 0) == -1)
+			perror("session manager: send\n");
 	}
 }
 
@@ -145,7 +151,10 @@ struct message_handler msg_handlers[] =
 		.handler_func = handle_map_shm_query },
 	[MSG_SESSION_QUIT] = {
 		.message_size = sizeof(struct message),
-		.handler_func = handle_session_quit_message }
+		.handler_func = handle_session_quit_message },
+	[MSG_JOIN] = {
+		.message_size = sizeof(struct message),
+		.handler_func = handle_join_query }
 };
 
 /**
@@ -181,8 +190,12 @@ int run_manager() {
  */
 void notify_idle_session(pid_t pid) {
 	DBG(3, "Sending idle session notification from pid %d\n", pid);
-
 	query(pid, MSG_IDLE, 0, 0);
+}
+
+void notify_join_game(pid_t pid) {
+	DBG(3, "Sending join query from pid %d\n", pid);
+	query(pid, MSG_JOIN, 0, 0);
 }
 
 int get_map_shm(pid_t pid) {

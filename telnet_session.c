@@ -56,25 +56,23 @@ void map_set(int y, int x, char v) {
 }
 
 /**
- * Currently, this function requests the game's shared memory segment from the
- * game manager.  This is a temporary solution until a real game lobby system is
- * created.
+ * Requests the game's shared memory segment from the game manager.
+ * Returns 0 on success, -1 on failure.
  */
-void init_map() {
+int init_map() {
 	int shmid = get_map_shm(own_pid);
 	if (shmid == -1) {
-		printf("Unable to establish a map, client dropping out (shmget)\n");
-		exit(1);
+		return -1;
 	}
 	own_game = (struct game*)shmat(shmid, 0, 0);
 	map = own_game->map;
 	if (map == (char*)-1) {
-		printf("Unable to establish a map, client dropping out (shmat)\n");
+		perror("client: shmat");
 		exit(1);
 	}
 
 	own_player_num = (own_game->sessions[0] == own_pid) ? 1 : 2;
-	/*if (own_player_num == 2) waiting_for_opponent = 1;*/
+	return 0;
 }
 
 /**
@@ -110,52 +108,50 @@ void print_map(FILE* out, int y, int x) {
 	fputs("\e[0m", out);
 }
 
-/**
- * Handles the telnet session thread.
- * sock		Socket connected to the telnet client
- */
-void telnet_session(int sock) {
-	own_pid = getpid();
-	/* stdio is used on output TCP stream */
-	FILE *out;
-	out = fdopen(sock, "w");
-	if ( out == 0) {
-		perror("client: fdopen");
-		exit(5);
+void session_start(FILE* out, int sock) {
+	fputs("kropkid\r\n"
+			"<http://github.com/PawelStiasny/kropkid>\r\n\r\n"
+			"[h]ost / [j]oin / [q]uit? ", out);
+	fflush(out);
+	char input = 0;
+	while (1) {
+		size_t status = recv(sock, &input, 1, 0);
+		if (status != 1 || input == 'q') {
+			fputs("\r\nGoodbye\r\n", out);
+			fflush(out);
+			exit(1);
+		} else if (input == 'h') {
+			/* host game */
+			notify_idle_session(own_pid);
+			waiting_for_opponent = 1;
+			init_map();
+			break;
+		} else if (input == 'j') {
+			/* join game */
+			notify_join_game(own_pid);
+			waiting_for_opponent = 0;
+			if (init_map() == -1) {
+				fputs("\r\nNo games to join\r\n"
+						"[h]ost / [j]oin / [q]uit? ", out);
+				fflush(out);
+			} else
+				break;
+		}
 	}
-	
-	struct sigaction usr1_sig_action;
-	usr1_sig_action.sa_handler = handle_signal_poke;
-	/* It is important to allow interruption of system calls, so recv waiting
-	   for user input can be interrupted after opponents move. */
-	usr1_sig_action.sa_flags = 0;
-	sigemptyset(&usr1_sig_action.sa_mask);
+}
 
-	if (sigaction(SIGUSR1, &usr1_sig_action, 0) == -1) {
-		perror("client: sigaction");
-		exit(1);
-	}
-	
-	/*
-	if (!join_idle_session()) {
-		wait for another player
-	}
-	*/
-	notify_idle_session(own_pid);
-	init_map();
-
+void session_ingame(FILE* out, int sock) {
 	int exit = 0, cur_y = MAP_HEIGHT / 2, cur_x = MAP_WIDTH / 2;
 	int escape_status = 0; /* for reading escape sequences (arrow keys) */
 
-	/* set raw terminal, no echo (telnet protocol) */
-	fputs("\xff\xfb\x01\xff\xfb\x03\xff\xfd\x0f3", out);
 	/* clear screen (ansi sequences) */
 	fputs("\e[2J\e[H", out);
 
 	print_map(out, MAP_TOP, MAP_LEFT);
 
 	while (!exit) {
-		fprintf(out, "\e[24;0H\e[0KGame #%d, You: %s\e[0m  q:Exit  <Space>:Move ",
+		fprintf(out,
+				"\e[24;0H\e[0KGame #%d, You: %s\e[0m  q:Exit  <Space>:Move ",
 				0, (own_player_num == 1) ? "\e[1;32mX" : "\e[1;34mO");
 
 		if (waiting_for_opponent) {
@@ -172,7 +168,7 @@ void telnet_session(int sock) {
 		if (status == 1) {
 			switch(input) {
 				case 'q':
-					fprintf(out, "\e[0m\e[2J\e[HGoodbye!\r\n");
+					fprintf(out, "\e[0m\e[2J\e[H");
 					exit = 1;
 					break;
 				case 'A':
@@ -230,9 +226,44 @@ void telnet_session(int sock) {
 			DBG(1, "???\n");
 	}
 	fflush(out);
-	fclose(out);
-
-	notify(own_pid, MSG_SESSION_QUIT);
 	shmdt(map);
+	notify(own_pid, MSG_SESSION_QUIT);
+}
+
+/**
+ * Handles the telnet session thread.
+ * sock		Socket connected to the telnet client
+ */
+void telnet_session(int sock) {
+	own_pid = getpid();
+	/* stdio is used on output TCP stream */
+	FILE *out;
+	out = fdopen(sock, "w");
+	if ( out == 0) {
+		perror("client: fdopen");
+		exit(1);
+	}
+
+	/* set raw terminal, no echo (telnet protocol) */
+	fputs("\xff\xfb\x01\xff\xfb\x03\xff\xfd\x0f3", out);
+
+	struct sigaction usr1_sig_action;
+	usr1_sig_action.sa_handler = handle_signal_poke;
+	/* It is important to allow interruption of system calls, so recv waiting
+	   for user input can be interrupted after opponents move. */
+	usr1_sig_action.sa_flags = 0;
+	sigemptyset(&usr1_sig_action.sa_mask);
+
+	if (sigaction(SIGUSR1, &usr1_sig_action, 0) == -1) {
+		perror("client: sigaction");
+		exit(1);
+	}
+
+	while(1) {
+		session_start(out, sock);
+		session_ingame(out, sock);
+	}
+
+	fclose(out);
 }
 
