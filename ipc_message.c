@@ -14,9 +14,17 @@
  * handlers		array mapping message types to struct message_handler
  * rsock		socket connected to the incoming connection
  */
-int ipc_receive_message(struct message_handler handlers[], int rsock) {
+int ipc_receive_message(
+		struct message_handler handlers[], 
+		unsigned int handler_count, int rsock)
+{
 	int message_type;
 	recv(rsock, &message_type, sizeof(message_type), 0);
+	
+	if (message_type >= handler_count) {
+		fprintf(stderr, "Invalid message type %d\n", message_type);
+		return -1;
+	}
 
 	struct message *message_data =
 		malloc(handlers[message_type].message_size);
@@ -43,7 +51,10 @@ int ipc_receive_message(struct message_handler handlers[], int rsock) {
 /**
  * Accepts incoming connections and handles messages
  */
-int ipc_accept_message(struct message_handler handlers[], int listener_socket) {
+int ipc_accept_message(
+		struct message_handler handlers[],
+		unsigned int handler_count, int listener_socket)
+{
 	struct sockaddr_un remote;
 	socklen_t desclen = sizeof(remote);
 	int rsock = accept(
@@ -55,7 +66,7 @@ int ipc_accept_message(struct message_handler handlers[], int listener_socket) {
 		return -1;
 	}
 
-	int r = ipc_receive_message(handlers, rsock);
+	int r = ipc_receive_message(handlers, handler_count, rsock);
 
 	close(rsock);
 	return r;

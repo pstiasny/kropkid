@@ -178,7 +178,10 @@ int run_manager() {
 
 		DBG(2, "Session manager is running\n");
 		for(;;) {
-			ipc_accept_message(msg_handlers, listener_socket);
+			ipc_accept_message(
+					msg_handlers,
+					COUNT_HANDLERS(msg_handlers),
+					listener_socket);
 		}
 		exit(0);
 	} else

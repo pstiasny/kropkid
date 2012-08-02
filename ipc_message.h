@@ -13,12 +13,27 @@ struct message_handler {
 };
 
 /* host */
-int ipc_receive_message(struct message_handler handlers[], int rsock);
-int ipc_accept_message(struct message_handler handlers[], int listener_socket);
+#define COUNT_HANDLERS(h_array) \
+	(sizeof(h_array) / sizeof(struct message_handler))
+
+int ipc_receive_message(
+		struct message_handler handlers[],
+		unsigned int handler_count,
+		int rsock);
+
+int ipc_accept_message(
+		struct message_handler handlers[], 
+		unsigned int handler_count,
+		int listener_socket);
+
 int ipc_start_listener();
 
 /* client */
 int get_send_socket();
+
 void notify(pid_t pid, int message_type);
-int query(pid_t pid, int message_type, void *response_buffer, size_t response_size);
+
+int query(
+		pid_t pid, int message_type, 
+		void *response_buffer, size_t response_size);
 
