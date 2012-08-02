@@ -34,6 +34,16 @@ char map_get(int y, int x) {
 		return map[y * MAP_WIDTH + x];
 }
 
+void poke_opponent() {
+	if (own_pid == own_game->sessions[0] &&
+			own_game->sessions[1] != 0)
+		kill(own_game->sessions[1], SIGUSR1);
+	else if (own_pid == own_game->sessions[1])
+		kill(own_game->sessions[0], SIGUSR1);
+	else
+		DBG(2, "Noone to poke\n");
+}
+
 /**
  * Update the given field of the map.  Currently this also notifies the opponent
  * about the move.
@@ -42,13 +52,7 @@ void map_set(int y, int x, char v) {
 	if (map != 0)
 		map[y * MAP_WIDTH + x] = v;
 
-	if (own_pid == own_game->sessions[0] &&
-			own_game->sessions[1] != 0)
-		kill(own_game->sessions[1], SIGUSR1);
-	else if (own_pid == own_game->sessions[1])
-		kill(own_game->sessions[0], SIGUSR1);
-	else
-		DBG(2, "Noone to poke\n");
+	poke_opponent();
 }
 
 /**
