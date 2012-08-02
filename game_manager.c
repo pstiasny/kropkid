@@ -14,6 +14,11 @@
 struct game *idle_games[MAX_GAMES];
 int idle_game_count;
 
+struct join_message {
+	struct message m;
+	char game_key[7];
+};
+
 /**
  * Returns ID of the game connected to the given PID,
  * -1 if not found.
@@ -90,16 +95,11 @@ void handle_idle_message(struct message *im, int socket) {
 
 void handle_join_query(struct message *m, int socket) {
 	DBG(3, "Received join query from pid %d\n", m->pid);
+	struct join_message *jm = (struct join_message*)m;
 	/* Attach to an idle session */
-	int i;
-	for (i = 0; i < idle_game_count; i++)
-		if (idle_games[i]->sessions[1] == 0) {
-			idle_games[i]->sessions[1] = m->pid;
-			return;
-		} else if (idle_games[i]->sessions[0] == 0) {
-			idle_games[i]->sessions[0] = m->pid;
-			return;
-		}
+	int i = get_game_by_key(jm->game_key);
+	if (i != -1 && idle_games[i]->sessions[1] == 0)
+		idle_games[i]->sessions[1] = m->pid;
 }
 
 void handle_session_quit_message(struct message *qm, int socket) {
@@ -174,7 +174,7 @@ struct message_handler msg_handlers[] =
 		.message_size = sizeof(struct message),
 		.handler_func = handle_session_quit_message },
 	[MSG_JOIN] = {
-		.message_size = sizeof(struct message),
+		.message_size = sizeof(struct join_message),
 		.handler_func = handle_join_query }
 };
 
@@ -219,9 +219,22 @@ void notify_idle_session(pid_t pid) {
 	query(pid, MSG_IDLE, 0, 0);
 }
 
-void notify_join_game(pid_t pid) {
+void notify_join_game(pid_t pid, char key[]) {
 	DBG(3, "Sending join query from pid %d\n", pid);
-	query(pid, MSG_JOIN, 0, 0);
+	/*query(pid, MSG_JOIN, 0, 0);*/
+	int sock = get_send_socket();
+	if (sock == -1) {
+		perror("client: get_send_socket");
+		return;
+	}
+	
+	struct join_message m;
+	m.m.mt = MSG_JOIN;
+	m.m.pid = pid;
+	strcpy(m.game_key, key);
+
+	if (send(sock, &m, sizeof(m), 0) == -1)
+		perror("client: send\n");
 }
 
 int get_map_shm(pid_t pid) {

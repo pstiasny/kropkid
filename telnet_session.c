@@ -108,6 +108,21 @@ void print_map(FILE* out, int y, int x) {
 	fputs("\e[0m", out);
 }
 
+void session_join(FILE* out, int sock) {
+	char game_key[7];
+	int i;
+	fputs("\r\nEnter game key: ", out);
+	fflush(out);
+	for(i = 0; i < 6; i++) {
+		if (recv(sock, game_key + i, 1, 0) != 1)
+			return;
+		fputc(game_key[i], out);
+		fflush(out);
+	}
+	game_key[7] = 0;
+	notify_join_game(own_pid, game_key);
+}
+
 void session_start(FILE* out, int sock) {
 	fputs("kropkid\r\n"
 			"<http://github.com/PawelStiasny/kropkid>\r\n\r\n"
@@ -128,7 +143,7 @@ void session_start(FILE* out, int sock) {
 			break;
 		} else if (input == 'j') {
 			/* join game */
-			notify_join_game(own_pid);
+			session_join(out, sock);
 			waiting_for_opponent = 0;
 			if (init_map() == -1) {
 				fputs("\r\nNo games to join\r\n"

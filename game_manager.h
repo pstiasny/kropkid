@@ -36,4 +36,4 @@ enum MESSAGE_TYPE {
 int run_manager();
 void notify_idle_session(pid_t pid);
 int get_map_shm(pid_t pid);
-void notify_join_game(pid_t pid);
+void notify_join_game(pid_t pid, char key[]);
