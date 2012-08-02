@@ -88,25 +88,15 @@ void handle_signal_poke(int sig) {
 void print_map(FILE* out, int y, int x) {
 	int i, j;
 	
-	fprintf(out, "\e[%d;%dH+", y, x);
+	fprintf(out, "\e[%d;%dH", y + MAP_HEIGHT + 1, x);
 	for (j = 0; j < MAP_WIDTH; j++)
-		fputs("-", out);
-	fputs("+", out);
-
-	fprintf(out, "\e[%d;%dH+", y + MAP_HEIGHT + 1, x);
-	for (j = 0; j < MAP_WIDTH; j++)
-		fputs("-", out);
-	fputs("+", out);
-
-	for (i = 0; i < MAP_HEIGHT; i++) {
-		fprintf(out, "\e[%d;%dH|", y + i + 1, x);
-		fprintf(out, "\e[%d;%dH|", y + i + 1, x + MAP_WIDTH + 1);
-	}
+		fputs("=", out);
 
 	for (i = 0; i < MAP_HEIGHT; i++) {
 		fprintf(out, "\e[%d;%dH", i + y + 1, x + 1);
 		for (j = 0; j < MAP_WIDTH; j++) {
-			/* if ((i+j)%2) fputs("\e[46m", out);
+			/* for colourful background:
+			if ((i+j)%2) fputs("\e[46m", out);
 			else fputs("\e[47m", out); */
 			if (map_get(i, j) == 0) fputs(" ", out);
 			else if (map_get(i, j) == 1) fputs("\e[1;32mX", out);
@@ -158,14 +148,19 @@ void telnet_session(int sock) {
 	/* clear screen (ansi sequences) */
 	fputs("\e[2J\e[H", out);
 
-	print_map(out, 3, MAP_LEFT);
+	print_map(out, MAP_TOP, MAP_LEFT);
 
 	while (!exit) {
-		fputs("\e[3;50H\e[0KChoose your action: "
-				"\e[4;50H q. Exit"
-				"\e[5;50H h,j,k,l. Move cursor"
-				"\e[6;50H <Space>. Mark field", out);
-		fprintf(out, "\e[%d;%dH", cur_y + 4, cur_x + MAP_LEFT + 1);
+		fprintf(out, "\e[24;0H\e[0KGame #%d, You: %s\e[0m  q:Exit  <Space>:Move ",
+				0, (own_player_num == 1) ? "\e[1;32mX" : "\e[1;34mO");
+
+		if (waiting_for_opponent) {
+			if (own_player_num == 1)
+				fputs("\e[24;64H\e[0KWaiting for O...", out);
+			else
+				fputs("\e[24;64H\e[0KWaiting for X...", out);
+		}
+		fprintf(out, "\e[%d;%dH", cur_y + MAP_TOP + 1, cur_x + MAP_LEFT + 1);
 		fflush(out);
 
 		char input;
@@ -196,11 +191,7 @@ void telnet_session(int sock) {
 					if (!waiting_for_opponent && map_get(cur_y, cur_x) == 0) {
 						map_set(cur_y, cur_x, own_player_num);
 						waiting_for_opponent = 1;
-						print_map(out, 3, MAP_LEFT);
-						if (own_player_num == 1)
-							fputs("\e[8;50H\e[0KWaiting for player 2 (O) to move...", out);
-						else
-							fputs("\e[8;50H\e[0KWaiting for player 1 (X) to move...", out);
+						print_map(out, MAP_TOP, MAP_LEFT);
 					}
 					break;
 				case 0x1b:
@@ -223,7 +214,7 @@ void telnet_session(int sock) {
 					fprintf(out, "\e[0m\e[2J\e[HThe other player has left\r\n");
 					exit = 1;
 				} else {
-					print_map(out, 3, MAP_LEFT);
+					print_map(out, MAP_TOP, MAP_LEFT);
 					map_updated = 0;
 					waiting_for_opponent = 0;
 					fputs("\e[8;50H\e[0K", out);

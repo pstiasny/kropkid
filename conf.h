@@ -7,9 +7,10 @@
 	#define MGR_SOCKET "/var/run/kropkid_sock"
 #endif
 
-#define MAP_HEIGHT 18
-#define MAP_WIDTH 35
-#define MAP_LEFT 6
+#define MAP_HEIGHT 22
+#define MAP_WIDTH 80
+#define MAP_LEFT 0
+#define MAP_TOP 0
 
 #define MAX_GAMES 1024
 
