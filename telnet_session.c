@@ -151,8 +151,9 @@ void session_ingame(FILE* out, int sock) {
 
 	while (!exit) {
 		fprintf(out,
-				"\e[24;0H\e[0KGame #%d, You: %s\e[0m  q:Exit  <Space>:Move ",
-				0, (own_player_num == 1) ? "\e[1;32mX" : "\e[1;34mO");
+				"\e[24;0H\e[0KGame #%s, You: %s\e[0m  q:Exit  <Space>:Move ",
+				own_game->key,
+				(own_player_num == 1) ? "\e[1;32mX" : "\e[1;34mO");
 
 		if (waiting_for_opponent) {
 			if (own_player_num == 1)

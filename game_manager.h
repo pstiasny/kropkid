@@ -21,6 +21,9 @@ struct game {
 	char map[MAP_WIDTH * MAP_HEIGHT];
 
 	enum GAME_STATE state;
+
+	/* null-terminated string containing a random key */
+	char key[7];
 };
 
 enum MESSAGE_TYPE {

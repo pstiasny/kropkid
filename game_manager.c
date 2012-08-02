@@ -9,6 +9,7 @@
 #include <sys/un.h>
 #include <sys/shm.h>
 #include <signal.h>
+#include <time.h>
 
 struct game *idle_games[MAX_GAMES];
 int idle_game_count;
@@ -24,6 +25,20 @@ int get_game_by_pid(pid_t pid) {
 				idle_games[i]->sessions[1] == pid)
 			return i;
 	return -1;
+}
+
+int get_game_by_key(char *key) {
+	int i = -1;
+	for (i = 0; i < idle_game_count; i++)
+		if (!strcmp(idle_games[i]->key, key))
+			return i;
+	return -1;
+}
+
+void random_string(char *c, int length) {
+	while(length--)
+		*(c++) = 'a' + (rand() % ('z' - 'a'));
+	*c = 0;
 }
 
 void handle_idle_message(struct message *im, int socket) {
@@ -59,6 +74,12 @@ void handle_idle_message(struct message *im, int socket) {
 		g->sessions[0] = im->pid;
 		g->sessions[1] = 0;
 		g->state = GAME_ACTIVE;
+
+		char new_key[7];
+		random_string(new_key, 6);
+		while (get_game_by_key(new_key) != -1)
+			random_string(new_key, 6);
+		strcpy(g->key, new_key);
 
 		memset(g->map, 0, MAP_WIDTH*MAP_HEIGHT*sizeof(char));
 
@@ -165,6 +186,8 @@ int run_manager() {
 	if (pid == 0) {
 		memset(idle_games, 0, sizeof(idle_games));
 		idle_game_count = 0;
+		/* for key generation */
+		srand(time(0));
 
 		signal(SIGTERM, at_manager_exit);
 		signal(SIGINT, at_manager_exit);
