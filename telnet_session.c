@@ -2,12 +2,16 @@
 #include "game_manager.h"
 #include "ipc_message.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <errno.h>
 #include <unistd.h>
 #include <signal.h>
 #include <sys/shm.h>
 #include <sys/socket.h>
+
+/* rules.c */
+void process_map(char *map, int start_y, int start_x);
 
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #define max(x, y) (((x) > (y)) ? (x) : (y))
@@ -49,8 +53,10 @@ void poke_opponent() {
  * about the move.
  */
 void map_set(int y, int x, char v) {
-	if (map != 0)
-		map[y * MAP_WIDTH + x] = v;
+	assert(map != 0);
+
+	map[y * MAP_WIDTH + x] = v;
+	process_map(map, y, x);
 
 	poke_opponent();
 }
@@ -97,30 +103,43 @@ void print_map(FILE* out, int y, int x) {
 	for (i = 0; i < MAP_HEIGHT; i++) {
 		fprintf(out, "\e[%d;%dH", i + y + 1, x + 1);
 		for (j = 0; j < MAP_WIDTH; j++) {
+			char field = map_get(i, j);
 			/* for colourful background:
 			if ((i+j)%2) fputs("\e[46m", out);
 			else fputs("\e[47m", out); */
-			if (map_get(i, j) == 0) fputs(" ", out);
-			else if (map_get(i, j) == 1) fputs("\e[1;32mX", out);
-			else if (map_get(i, j) == 2) fputs("\e[1;34mO", out);
+			if ((field & 3) == 1) 
+				if (field & (1 << 3))
+					fputs("\e[0mx", out);
+				else
+					fputs("\e[1;32mX", out);
+			else if ((field & 3) == 2)
+				if (field & (1 << 3))
+					fputs("\e[0mo", out);
+				else
+					fputs("\e[1;34mO", out);
+			/*else if (map_get(i, j) & (1 << 7)) fputs("\e[0m.", out);*/
+			else fputs(" ", out);
 		}
 	}
 	fputs("\e[0m", out);
 }
 
-void session_join(FILE* out, int sock) {
-	char game_key[7];
+int session_join(FILE* out, int sock) {
+	char game_key[7] = "";
 	int i;
 	fputs("\r\nEnter game key: ", out);
 	fflush(out);
 	for(i = 0; i < 6; i++) {
 		if (recv(sock, game_key + i, 1, 0) != 1)
-			return;
+			return -1;
+		if (game_key[i] < 'a' || game_key[i] > 'z')
+			return -1;
 		fputc(game_key[i], out);
 		fflush(out);
 	}
 	game_key[7] = 0;
 	notify_join_game(own_pid, game_key);
+	return 0;
 }
 
 void session_start(FILE* out, int sock) {
@@ -144,7 +163,11 @@ void session_start(FILE* out, int sock) {
 			break;
 		} else if (input == 'j') {
 			/* join game */
-			session_join(out, sock);
+			if (session_join(out, sock) == -1) {
+				fputs("\r\n[h]ost / [j]oin / [q]uit? ", out);
+				fflush(out);
+				continue;
+			}
 			waiting_for_opponent = 0;
 			if (init_map() == -1) {
 				fputs("\r\nNo games to join\r\n"
@@ -205,7 +228,7 @@ void session_ingame(FILE* out, int sock) {
 				case 'l':
 					cur_x = min(MAP_WIDTH - 1, cur_x + 1); break;
 				case ' ':
-					if (!waiting_for_opponent && map_get(cur_y, cur_x) == 0) {
+					if (!waiting_for_opponent && (map_get(cur_y, cur_x)&3) == 0) {
 						map_set(cur_y, cur_x, own_player_num);
 						waiting_for_opponent = 1;
 						print_map(out, MAP_TOP, MAP_LEFT);
