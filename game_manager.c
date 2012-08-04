@@ -50,21 +50,8 @@ void handle_idle_message(struct message *im, int socket) {
 	int i;
 	DBG(3, "Received idle notification from pid %d\n", im->pid);
 	if (idle_game_count >= MAX_GAMES) {
-		DBG(1, "Too many idle sessions, I'm dying.\n");
-		for (i = 0; i < MAX_GAMES; i++) {
-			DBG(2, "Session %d: %d\n", i, idle_games[i]->sessions[0]);
-			struct game *g = idle_games[i];
-			int shm_id = g->game_shm;
-
-			if (g->sessions[0] != 0)
-				kill(g->sessions[0], SIGTERM);
-			if (g->sessions[1] != 0)
-				kill(g->sessions[1], SIGTERM);
-			
-			shmdt(idle_games[i]);
-			shmctl(shm_id, IPC_RMID, 0);
-		}
-		exit(1);
+		DBG(1, "Too many sessions, rejecting request\n");
+		return;
 	}
 
 	/* Allocate a shared game structure */
