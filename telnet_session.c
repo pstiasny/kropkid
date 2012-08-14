@@ -1,6 +1,7 @@
 #include "conf.h"
 #include "game_manager.h"
 #include "ipc_message.h"
+#include "rules.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -10,8 +11,6 @@
 #include <sys/shm.h>
 #include <sys/socket.h>
 
-/* rules.c */
-void process_map(char *map, int start_y, int start_x);
 
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #define max(x, y) (((x) > (y)) ? (x) : (y))
@@ -107,13 +106,13 @@ void print_map(FILE* out, int y, int x) {
 			/* for colourful background:
 			if ((i+j)%2) fputs("\e[46m", out);
 			else fputs("\e[47m", out); */
-			if ((field & 3) == 1) 
-				if (field & (1 << 3))
+			if ((field & PLAYER) == 1) 
+				if (field & DISABLED)
 					fputs("\e[0mx", out);
 				else
 					fputs("\e[1;32mX", out);
-			else if ((field & 3) == 2)
-				if (field & (1 << 3))
+			else if ((field & PLAYER) == 2)
+				if (field & DISABLED)
 					fputs("\e[0mo", out);
 				else
 					fputs("\e[1;34mO", out);

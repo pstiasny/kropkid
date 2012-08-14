@@ -14,7 +14,7 @@ telnet_session.o: telnet_session.c conf.h game_manager.o ipc_message.o rules.o
 ipc_message.o: ipc_message.c ipc_message.h
 	gcc $(CFLAGS) -c ipc_message.c -o ipc_message.o
 
-rules.o: rules.c conf.h
+rules.o: rules.c rules.h conf.h
 	gcc $(CFLAGS) -c rules.c -o rules.o
 
 clean: 
