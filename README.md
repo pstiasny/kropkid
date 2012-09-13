@@ -1,6 +1,6 @@
 *kropkid* is a forking server for a multiplayer telnet-based game of Dots.
 
-![Screenshot](screenshot.png)
+![Screenshot](https://raw.github.com/PawelStiasny/kropkid/master/screenshot.png)
 
 Platform: gcc c99, POSIX-compliant, tested on linux
 
