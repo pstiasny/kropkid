@@ -47,7 +47,6 @@ void random_string(char *c, int length) {
 }
 
 void handle_idle_message(struct message *im, int socket) {
-	int i;
 	DBG(3, "Received idle notification from pid %d\n", im->pid);
 	if (idle_game_count >= MAX_GAMES) {
 		DBG(1, "Too many sessions, rejecting request\n");
